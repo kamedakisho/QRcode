@@ -29,9 +29,11 @@
     let lastCode = '';
     let lastTime = 0;
 
-  function sendCheckIn(memberId) {
+ function sendCheckIn(memberId) {
   return new Promise((resolve, reject) => {
     const callbackName = 'callback_' + Date.now();
+
+    const script = document.createElement('script');
 
     window[callbackName] = function(data) {
       resolve(data);
@@ -39,12 +41,12 @@
       script.remove();
     };
 
-    const script = document.createElement('script');
     script.src = GAS_API_URL
       + '?id=' + encodeURIComponent(memberId)
       + '&callback=' + callbackName;
 
     script.onerror = reject;
+
     document.body.appendChild(script);
   });
 }
