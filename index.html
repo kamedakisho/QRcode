@@ -10,17 +10,16 @@
     h1 { font-size: 36px; margin: 30px 0; }
     #reader { width: 86%; max-width: 700px; margin: auto; background: white; }
     #message { margin: 28px auto; width: 86%; padding: 26px; border-radius: 8px; background: #2eae55; color: white; font-size: 32px; font-weight: bold; }
-    #count { margin: 20px auto; width: 86%; padding: 26px; border-radius: 8px; background: #0068c9; color: white; font-size: 36px; font-weight: bold; }
   </style>
 </head>
 
 <body>
-  <div class="header">医療フィットネス 受付</div>
+　<div class="header">Dr.パーソナル</div>
   <h1>QRコードをかざしてください</h1>
 
   <div id="reader"></div>
   <div id="message">読み取り待機中</div>
-  <div id="count">現在の来館人数：-- 人</div>
+
 
   <script>
     const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwIsPp43GFGyJ4gOshab_odDCjpPGS8yRhUsygNJZBsf_-Y4lb8GR9tLhFX2-ZAu1jr/exec';
@@ -69,7 +68,7 @@
 
         document.getElementById('message').style.background = result.ok ? '#2eae55' : '#d93025';
         document.getElementById('message').textContent = result.message;
-        document.getElementById('count').textContent = '現在の来館人数：' + result.count + '人';
+       
 
    } catch (e) {
   document.getElementById('message').style.background = '#d93025';
