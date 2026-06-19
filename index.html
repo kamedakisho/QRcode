@@ -71,10 +71,11 @@
         document.getElementById('message').textContent = result.message;
         document.getElementById('count').textContent = '現在の来館人数：' + result.count + '人';
 
-      } catch (e) {
-        document.getElementById('message').style.background = '#d93025';
-        document.getElementById('message').textContent = '通信エラーです';
-      }
+   } catch (e) {
+  document.getElementById('message').style.background = '#d93025';
+  document.getElementById('message').textContent = '通信エラー: ' + e.message;
+  console.error(e);
+}
 
       setTimeout(() => {
         document.getElementById('message').style.background = '#2eae55';
