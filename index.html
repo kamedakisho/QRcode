@@ -101,6 +101,27 @@
     );
 
     scanner.render(onScanSuccess);
+
+    const scannerInput = document.getElementById('scannerInput');
+
+function focusScannerInput() {
+  scannerInput.focus();
+}
+
+window.addEventListener('load', focusScannerInput);
+document.addEventListener('click', focusScannerInput);
+setInterval(focusScannerInput, 1000);
+
+scannerInput.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    const memberId = scannerInput.value.trim();
+    scannerInput.value = '';
+
+    if (memberId) {
+      onScanSuccess(memberId);
+    }
+  }
+});
   </script>
 </body>
 </html>
