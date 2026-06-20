@@ -2,126 +2,153 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>医療フィットネス受付</title>
-  <script src="https://unpkg.com/html5-qrcode"></script>
+  <title>Dr.パーソナル受付</title>
   <style>
     body { font-family: sans-serif; text-align: center; margin: 0; background: #f5f7fb; }
     .header { background: #0068c9; color: white; padding: 28px; font-size: 36px; font-weight: bold; }
-    h1 { font-size: 36px; margin: 30px 0; }
-    #reader { width: 86%; max-width: 700px; margin: auto; background: white; }
-    #message { margin: 28px auto; width: 86%; padding: 26px; border-radius: 8px; background: #2eae55; color: white; font-size: 32px; font-weight: bold; }
+    h1 { font-size: 36px; margin: 40px 0; }
+    #message { margin: 40px auto; width: 86%; padding: 30px; border-radius: 8px; background: #2eae55; color: white; font-size: 34px; font-weight: bold; }
 
     #scannerInput {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
+      position: absolute;
+      left: -9999px;
+      opacity: 0;
+    }
   </style>
 </head>
 
 <body>
+  <div class="header">Dr.パーソナル</div>
+  <h1>QRコードをリーダーで読み取ってください</h1>
+
   <input id="scannerInput" autocomplete="off" autofocus>
-　<div class="header">Dr.パーソナル</div>
-  <h1>QRコードをかざしてください</h1>
 
-  <div id="reader"></div>
   <div id="message">読み取り待機中</div>
-
 
   <script>
     const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwIsPp43GFGyJ4gOshab_odDCjpPGS8yRhUsygNJZBsf_-Y4lb8GR9tLhFX2-ZAu1jr/exec';
 
     let processing = false;
+    let buffer = '';
     let lastCode = '';
     let lastTime = 0;
 
- function sendCheckIn(memberId) {
-  return new Promise((resolve, reject) => {
-    const callbackName = 'callback_' + Date.now();
+    const scannerInput = document.getElementById('scannerInput');
 
-    const script = document.createElement('script');
+    function focusScannerInput() {
+      scannerInput.focus();
+    }
 
-    window[callbackName] = function(data) {
-      resolve(data);
-      delete window[callbackName];
-      script.remove();
-    };
+    window.addEventListener('load', focusScannerInput);
+    document.addEventListener('click', focusScannerInput);
+    document.addEventListener('keydown', focusScannerInput);
+    setInterval(focusScannerInput, 500);
 
-    script.src = GAS_API_URL
-      + '?id=' + encodeURIComponent(memberId)
-      + '&callback=' + callbackName;
+    function sendCheckIn(memberId) {
+      return new Promise((resolve, reject) => {
+        const callbackName = 'callback_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+        const script = document.createElement('script');
 
-    script.onerror = reject;
+        window[callbackName] = function(data) {
+          resolve(data);
+          delete window[callbackName];
+          if (script.parentNode) script.parentNode.removeChild(script);
+        };
 
-    document.body.appendChild(script);
-  });
-}
+        script.src = GAS_API_URL
+          + '?id=' + encodeURIComponent(memberId)
+          + '&callback=' + encodeURIComponent(callbackName)
+          + '&t=' + Date.now();
 
-    async function onScanSuccess(decodedText) {
+        script.onerror = function() {
+          reject(new Error('GAS読み込み失敗'));
+        };
+
+        document.body.appendChild(script);
+
+        setTimeout(() => {
+          if (window[callbackName]) {
+            delete window[callbackName];
+            if (script.parentNode) script.parentNode.removeChild(script);
+            reject(new Error('GAS応答タイムアウト'));
+          }
+        }, 8000);
+      });
+    }
+
+    function playBeep() {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.frequency.setValueAtTime(1500, audioContext.currentTime);
+      gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.12);
+    }
+
+    async function onScanSuccess(memberId) {
       const now = Date.now();
 
+      memberId = String(memberId).trim();
+
+      if (!memberId) return;
       if (processing) return;
-      if (decodedText === lastCode && now - lastTime < 5000) return;
+      if (memberId === lastCode && now - lastTime < 5000) return;
 
       processing = true;
-      lastCode = decodedText;
+      lastCode = memberId;
       lastTime = now;
 
+      playBeep();
+
       document.getElementById('message').style.background = '#f0a000';
-      document.getElementById('message').textContent = '確認中...';
+      document.getElementById('message').textContent = '確認中... ID：' + memberId;
 
       try {
-        const result = await sendCheckIn(decodedText);
+        const result = await sendCheckIn(memberId);
 
         document.getElementById('message').style.background = result.ok ? '#2eae55' : '#d93025';
         document.getElementById('message').textContent = result.message;
-       
 
-   } catch (e) {
-  document.getElementById('message').style.background = '#d93025';
-  document.getElementById('message').textContent = '通信エラー: ' + e.message;
-  console.error(e);
-}
+      } catch (e) {
+        document.getElementById('message').style.background = '#d93025';
+        document.getElementById('message').textContent = '通信エラー: ' + e.message;
+      }
 
       setTimeout(() => {
         document.getElementById('message').style.background = '#2eae55';
         document.getElementById('message').textContent = '読み取り待機中';
         processing = false;
+        scannerInput.value = '';
+        focusScannerInput();
       }, 2500);
     }
 
-    const scanner = new Html5QrcodeScanner(
-      "reader",
-      {
-        fps: 10,
-        qrbox: { width: 300, height: 300 },
-        rememberLastUsedCamera: true
-      },
-      false
-    );
+    scannerInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        const memberId = scannerInput.value.trim();
+        scannerInput.value = '';
+        onScanSuccess(memberId);
+      }
+    });
 
-    scanner.render(onScanSuccess);
+    scannerInput.addEventListener('input', function() {
+      clearTimeout(window.scanTimer);
 
-    const scannerInput = document.getElementById('scannerInput');
+      window.scanTimer = setTimeout(() => {
+        const memberId = scannerInput.value.trim();
+        scannerInput.value = '';
 
-function focusScannerInput() {
-  scannerInput.focus();
-}
-
-window.addEventListener('load', focusScannerInput);
-document.addEventListener('click', focusScannerInput);
-setInterval(focusScannerInput, 1000);
-
-scannerInput.addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') {
-    const memberId = scannerInput.value.trim();
-    scannerInput.value = '';
-
-    if (memberId) {
-      onScanSuccess(memberId);
-    }
-  }
-});
+        if (memberId) {
+          onScanSuccess(memberId);
+        }
+      }, 300);
+    });
   </script>
 </body>
 </html>
